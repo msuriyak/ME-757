@@ -127,13 +127,13 @@ def get_lobatto_points(n):
 
         f = open('./nodes and weights/lobatto nodes')
         lobatto_nodes = json.load(f)
-        return lobatto_nodes[str(n)]
+        return np.array(lobatto_nodes[str(n)])
 
     else : 
         make_weights(n, n)
         f = open('./nodes and weights/lobatto nodes')
         lobatto_nodes = json.load(f)
-        return lobatto_nodes[str(n)]
+        return np.array(lobatto_nodes[str(n)])
 
 def get_lobatto_weights(n):
     if n < 2:
@@ -149,13 +149,13 @@ def get_lobatto_weights(n):
 
         f = open('./nodes and weights/lobatto weights')
         lobatto_weights = json.load(f)
-        return lobatto_weights[str(n)]
+        return np.array(lobatto_weights[str(n)])
 
     else : 
         make_weights(n, n)
         f = open('./nodes and weights/lobatto nodes')
         lobatto_nodes = json.load(f)
-        return lobatto_nodes[str(n)]
+        return np.array(lobatto_nodes[str(n)])
 
 def get_legendre_points(n):
     if n < 2:
@@ -171,13 +171,13 @@ def get_legendre_points(n):
 
         f = open('./nodes and weights/legendre nodes')
         legendre_nodes = json.load(f)
-        return legendre_nodes[str(n)]
+        return np.array(legendre_nodes[str(n)])
 
     else : 
         make_weights(n, n)
         f = open('./nodes and weights/legendre nodes')
         legendre_nodes = json.load(f)
-        return legendre_nodes[str(n)]
+        return np.array(legendre_nodes[str(n)])
 
 def get_legendre_weights(n):
     if n < 2:
@@ -193,13 +193,13 @@ def get_legendre_weights(n):
 
         f = open('./nodes and weights/legendre weights')
         legendre_weights = json.load(f)
-        return legendre_weights[str(n)]
+        return np.array(legendre_weights[str(n)])
 
     else : 
         make_weights(n, n)
         f = open('./nodes and weights/legendre nodes')
         legendre_nodes = json.load(f)
-        return legendre_nodes[str(n)]
+        return np.array(legendre_nodes[str(n)])
 
 if __name__ == '__main__':
     make_weights(2, 64)

@@ -1,7 +1,9 @@
 from __future__ import division
 import numpy as np
 
-class lagrange_interpolation(object):
+class lagrange_1d(object):
+	x_vals = None
+	func_vals = None
 	def __init__(self, x_vals, func_vals=None):
 		self.x_vals = x_vals
 		self.order = len(x_vals)   				# N + 1
@@ -17,6 +19,7 @@ class lagrange_interpolation(object):
 	def basis(self, j):
 		den = np.prod([(self.x_vals[j] - self.x_vals[i]) for i in range(self.order) if i!=j], axis=0)
 		def func_j(x):
+			x = np.array(x)
 			res = np.prod([(x - self.x_vals[i]) for i in range(self.order) if i!=j], axis=0)
 			return res/den
 		return func_j
@@ -45,9 +48,6 @@ class lagrange_interpolation(object):
 
 	def make_Lij(self, sampling_points, round_off=12):
 		return np.around(np.array([[self.basis_functions[i](elem) for elem in sampling_points] for i in range(self.order)]), round_off)
-
-
-
 
 if __name__ == '__main__':
 	print('Running main')
