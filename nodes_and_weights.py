@@ -71,7 +71,7 @@ def make_weights(n1, n2):
         keys = [int(item) for item in list(legendre_nodes.keys())]
         keys_to_iterate = diff([i for i in range(N_min, N_max)], keys)
 
-        print('Lobatto nodes ...')
+        print('Legendre nodes ...')
         for i in tqdm(keys_to_iterate):
             legendre_nodes[str(i)] = legendre_roots(i).tolist()
         
@@ -80,7 +80,7 @@ def make_weights(n1, n2):
         f.write(legendre_nodes)       
     else :
         legendre_nodes = {}
-        print('Leggendre nodes ...')
+        print('Legendre nodes ...')
         for i in tqdm(range(N_min, N_max)):
             legendre_nodes[i] = legendre_roots(i).tolist()
         
@@ -95,7 +95,7 @@ def make_weights(n1, n2):
         keys = [int(item) for item in list(legendre_node_weights.keys())]
         keys_to_iterate = diff([i for i in range(N_min, N_max)], keys)
 
-        print('Lobatto weights ...')
+        print('Legendre weights ...')
         for i in tqdm(keys_to_iterate):
             legendre_node_weights[str(i)] = legendre_weights(i).tolist()
         
