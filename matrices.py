@@ -137,6 +137,7 @@ def flux_matrix_2d(N_x, N_y, *, quad_nodes_x='lobatto', quad_nodes_y='lobatto', 
 
 if __name__ == '__main__':
     print('Running main!!!')
+    '''
     print(3*mass_matrix(1, quad_order=2))
     print(9*mass_matrix_2d(1, 1, quad_order_x=2, quad_order_y=2))
 
@@ -150,3 +151,8 @@ if __name__ == '__main__':
     print(3*flux_matrix_2d(1, 1)[1])
     print(3*flux_matrix_2d(1, 1)[2])
     print(3*flux_matrix_2d(1, 1)[3])
+    '''
+    print(9*mass_matrix_2d(1, 1))
+    print(225*mass_matrix_2d(2, 2))
+    print(3*5*mass_matrix(2))
+    print(flux_matrix(1))

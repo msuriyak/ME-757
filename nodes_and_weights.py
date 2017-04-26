@@ -202,4 +202,4 @@ def get_legendre_weights(n):
         return np.array(legendre_nodes[str(n)])
 
 if __name__ == '__main__':
-    make_weights(2, 64)
+    make_weights(2, 66)

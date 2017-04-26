@@ -12,14 +12,6 @@ def legendre_value(n, x):
                     x - (i - 1) * value[i - 2]) / i
     return value[n]
 
-def lobatto_value(n, x):
-    coeffs = legendre(n - 1).coeffs[::-1]
-    print(coeffs)
-    coeff_der = derivative_coeffs(coeffs)
-    print(coeff_der)
-    value = (1 - x**2) * polynomial_value(coeff_der, x)
-    return value
-
 # *********** Roots ***********
 def legendre_roots(n):
     x = np.zeros(n)
