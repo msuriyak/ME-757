@@ -1,21 +1,49 @@
 from __future__ import division
 import numpy as np
-import os
-from tqdm import tqdm
+
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
+from matplotlib import cm
+import matplotlib.animation as animation
 
 from nodes_and_weights import *
 from matrices import *
 
 g = 9.81
 
+'''
 def matrix_vec_product_DSS(a, b):
     res = np.zeros(b.shape)
     for i in range(b.shape[0]):
         for j in range(b.shape[1]):
             res[i, j, :] = np.dot(a, b[i, j, :])
-
     return res
+'''
 
+def RK4(x0, func_x_dot, h, func=None, change_variables=None):
+    if func == None :
+        def func():
+            pass
+    m = len(x0)
+    k1_x_dot = func_x_dot()
+    for i in range(m):
+        change_variables[i](x0[i] + 0.5*h*k1_x_dot[i])
+    func()
+
+    k2_x_dot = func_x_dot()
+    for i in range(m):
+        change_variables[i](x0[i] + 0.5*h*k2_x_dot[i])
+    func()
+
+    k3_x_dot = func_x_dot()
+    for i in range(m):
+        change_variables[i](x0[i] + h*k3_x_dot[i])
+    func()
+
+    k4_x_dot = func_x_dot()
+    for i in range(m):
+        change_variables[i](x0[i] + (1/6.0)*h*(k1_x_dot[i] + 2*k2_x_dot[i] + 2*k3_x_dot[i] + k4_x_dot[i]))
+    func()
 
 class shallow_water(object):
     # order of the polynomial interpolation (used in p-refinement)
@@ -163,8 +191,11 @@ class shallow_water(object):
                                                                                        quad_nodes_y=self.q_n_y, quad_order_x=self.q_o_x,
                                                                                        quad_order_y=self.q_o_y)
 
-
     def find_rates(self):
+        Nex = self.Nex
+        Ney = self.Ney
+        N_x = self.N_x
+        N_y = self.N_y
         etaRHS  = np.zeros(self.mat_shape)
         etauRHS = g*self.eta*self.H_x
         etavRHS = g*self.eta*self.H_y
@@ -186,188 +217,168 @@ class shallow_water(object):
         etav_flux_x_num = np.zeros(self.mat_shape)
         etav_flux_y_num = np.zeros(self.mat_shape)
 
-        for i in range(self.Ney):
-            for j in range(1, self.Nex):
-                for k in range(self.N_y + 1):
-                    alpha = max(abs(self.u[i*(self.N_y + 1) + k, j*(self.N_x + 1)]) + np.sqrt(g*self.eta[i*(self.N_y + 1) + k, j*(self.N_x + 1)]), 
-                                abs(self.u[i*(self.N_y + 1) + k, (j - 1)*(self.N_x + 1) + self.N_x]) + np.sqrt(g*self.eta[i*(self.N_y + 1) + k, (j - 1)*(self.N_x + 1) + self.N_x]))
+        for i in range(Ney):
+            for j in range(1, Nex):
+                for k in range(N_y + 1):
+                    alpha = max(abs(self.u[i*(N_y + 1) + k, j*(N_x + 1)]) + np.sqrt(g*self.eta[i*(N_y + 1) + k, j*(N_x + 1)]), 
+                                abs(self.u[i*(N_y + 1) + k, (j - 1)*(N_x + 1) + N_x]) + np.sqrt(g*self.eta[i*(N_y + 1) + k, (j - 1)*(N_x + 1) + N_x]))
 
-                    temp =  0.5*(eta_flux_x[i*(self.N_y + 1) + k, j*(self.N_x + 1)] + eta_flux_x[i*(self.N_y + 1) + k, (j - 1)*(self.N_x + 1) + self.N_x])
-                    temp += 0.5*alpha*(self.eta[i*(self.N_y + 1) + k, j*(self.N_x + 1)] - self.eta[i*(self.N_y + 1) + k, (j - 1)*(self.N_x + 1) + self.N_x]) 
-                    eta_flux_x_num[i*(self.N_y + 1) + k, j*(self.N_x + 1)] = eta_flux_x_num[i*(self.N_y + 1) + k, (j - 1)*(self.N_x + 1) + self.N_x] = temp
+                    temp =  0.5*(eta_flux_x[i*(N_y + 1) + k, j*(N_x + 1)] + eta_flux_x[i*(N_y + 1) + k, (j - 1)*(N_x + 1) + N_x])
+                    temp += 0.5*alpha*(self.eta[i*(N_y + 1) + k, j*(N_x + 1)] - self.eta[i*(N_y + 1) + k, (j - 1)*(N_x + 1) + N_x]) 
+                    eta_flux_x_num[i*(N_y + 1) + k, j*(N_x + 1)] = eta_flux_x_num[i*(N_y + 1) + k, (j - 1)*(N_x + 1) + N_x] = temp
 
-                    temp =  0.5*(etau_flux_x[i*(self.N_y + 1) + k, j*(self.N_x + 1)] + etau_flux_x[i*(self.N_y + 1) + k, (j - 1)*(self.N_x + 1) + self.N_x])
-                    temp += 0.5*alpha*(self.etau[i*(self.N_y + 1) + k, j*(self.N_x + 1)] - self.etau[i*(self.N_y + 1) + k, (j - 1)*(self.N_x + 1) + self.N_x]) 
-                    etau_flux_x_num[i*(self.N_y + 1) + k, j*(self.N_x + 1)] = etau_flux_x_num[i*(self.N_y + 1) + k, (j - 1)*(self.N_x + 1) + self.N_x] = temp
+                    temp =  0.5*(etau_flux_x[i*(N_y + 1) + k, j*(N_x + 1)] + etau_flux_x[i*(N_y + 1) + k, (j - 1)*(N_x + 1) + N_x])
+                    temp += 0.5*alpha*(self.etau[i*(N_y + 1) + k, j*(N_x + 1)] - self.etau[i*(N_y + 1) + k, (j - 1)*(N_x + 1) + N_x]) 
+                    etau_flux_x_num[i*(N_y + 1) + k, j*(N_x + 1)] = etau_flux_x_num[i*(N_y + 1) + k, (j - 1)*(N_x + 1) + N_x] = temp
 
-                    temp =  0.5*(etav_flux_x[i*(self.N_y + 1) + k, j*(self.N_x + 1)] + etav_flux_x[i*(self.N_y + 1) + k, (j - 1)*(self.N_x + 1) + self.N_x])
-                    temp += 0.5*alpha*(self.etav[i*(self.N_y + 1) + k, j*(self.N_x + 1)] - self.etav[i*(self.N_y + 1) + k, (j - 1)*(self.N_x + 1) + self.N_x]) 
-                    etav_flux_x_num[i*(self.N_y + 1) + k, j*(self.N_x + 1)] = etav_flux_x_num[i*(self.N_y + 1) + k, (j - 1)*(self.N_x + 1) + self.N_x] = temp
+                    temp =  0.5*(etav_flux_x[i*(N_y + 1) + k, j*(N_x + 1)] + etav_flux_x[i*(N_y + 1) + k, (j - 1)*(N_x + 1) + N_x])
+                    temp += 0.5*alpha*(self.etav[i*(N_y + 1) + k, j*(N_x + 1)] - self.etav[i*(N_y + 1) + k, (j - 1)*(N_x + 1) + N_x]) 
+                    etav_flux_x_num[i*(N_y + 1) + k, j*(N_x + 1)] = etav_flux_x_num[i*(N_y + 1) + k, (j - 1)*(N_x + 1) + N_x] = temp
         #print('First x flux')
         #print(eta_flux_x_num)
         #print(etau_flux_x_num)
         #print(etav_flux_x_num, '\n\n\n\n')
 
-        for i in range(1, self.Ney):
-            for j in range(self.Nex):
-                for k in range(self.N_x + 1):
-                    alpha = max(abs(self.v[i*(self.N_y + 1), j*(self.N_x + 1) + k]) + np.sqrt(g*self.eta[i*(self.N_y + 1), j*(self.N_x + 1) + k]), 
-                                abs(self.v[(i - 1)*(self.N_y + 1) + self.N_y, j*(self.N_x + 1) + k]) + np.sqrt(g*self.eta[(i - 1)*(self.N_y + 1) + self.N_y, j*(self.N_x + 1) + k]))
+        for i in range(1, Ney):
+            for j in range(Nex):
+                for k in range(N_x + 1):
+                    alpha = max(abs(self.v[i*(N_y + 1), j*(N_x + 1) + k]) + np.sqrt(g*self.eta[i*(N_y + 1), j*(N_x + 1) + k]), 
+                                abs(self.v[(i - 1)*(N_y + 1) + N_y, j*(N_x + 1) + k]) + np.sqrt(g*self.eta[(i - 1)*(N_y + 1) + N_y, j*(N_x + 1) + k]))
 
-                    temp =  0.5*(eta_flux_y[i*(self.N_y + 1), j*(self.N_x + 1) + k] + eta_flux_y[(i - 1)*(self.N_y + 1) + self.N_y, j*(self.N_x + 1) + k])
-                    temp += 0.5*alpha*(self.eta[i*(self.N_y + 1), j*(self.N_x + 1) + k] - self.eta[(i - 1)*(self.N_y + 1) + self.N_y, j*(self.N_x + 1) + k])
-                    eta_flux_y_num[i*(self.N_y + 1), j*(self.N_x + 1) + k] = eta_flux_y_num[(i - 1)*(self.N_y + 1) + self.N_y, j*(self.N_x + 1) + k] = temp
+                    temp =  0.5*(eta_flux_y[i*(N_y + 1), j*(N_x + 1) + k] + eta_flux_y[(i - 1)*(N_y + 1) + N_y, j*(N_x + 1) + k])
+                    temp += 0.5*alpha*(self.eta[i*(N_y + 1), j*(N_x + 1) + k] - self.eta[(i - 1)*(N_y + 1) + N_y, j*(N_x + 1) + k])
+                    eta_flux_y_num[i*(N_y + 1), j*(N_x + 1) + k] = eta_flux_y_num[(i - 1)*(N_y + 1) + N_y, j*(N_x + 1) + k] = temp
 
-                    temp =  0.5*(etau_flux_y[i*(self.N_y + 1), j*(self.N_x + 1) + k] + etau_flux_y[(i - 1)*(self.N_y + 1) + self.N_y, j*(self.N_x + 1) + k])
-                    temp += 0.5*alpha*(self.etau[i*(self.N_y + 1), j*(self.N_x + 1) + k] - self.etau[(i - 1)*(self.N_y + 1) + self.N_y, j*(self.N_x + 1) + k])
-                    etau_flux_y_num[i*(self.N_y + 1), j*(self.N_x + 1) + k] = etau_flux_y_num[(i - 1)*(self.N_y + 1) + self.N_y, j*(self.N_x + 1) + k] = temp
+                    temp =  0.5*(etau_flux_y[i*(N_y + 1), j*(N_x + 1) + k] + etau_flux_y[(i - 1)*(N_y + 1) + N_y, j*(N_x + 1) + k])
+                    temp += 0.5*alpha*(self.etau[i*(N_y + 1), j*(N_x + 1) + k] - self.etau[(i - 1)*(N_y + 1) + N_y, j*(N_x + 1) + k])
+                    etau_flux_y_num[i*(N_y + 1), j*(N_x + 1) + k] = etau_flux_y_num[(i - 1)*(N_y + 1) + N_y, j*(N_x + 1) + k] = temp
 
-                    temp =  0.5*(etav_flux_y[i*(self.N_y + 1), j*(self.N_x + 1) + k] + etav_flux_y[(i - 1)*(self.N_y + 1) + self.N_y, j*(self.N_x + 1) + k])
-                    temp += 0.5*alpha*(self.etav[i*(self.N_y + 1), j*(self.N_x + 1) + k] - self.etav[(i - 1)*(self.N_y + 1) + self.N_y, j*(self.N_x + 1) + k])
-                    etav_flux_y_num[i*(self.N_y + 1), j*(self.N_x + 1) + k] = etav_flux_y_num[(i - 1)*(self.N_y + 1) + self.N_y, j*(self.N_x + 1) + k] = temp
+                    temp =  0.5*(etav_flux_y[i*(N_y + 1), j*(N_x + 1) + k] + etav_flux_y[(i - 1)*(N_y + 1) + N_y, j*(N_x + 1) + k])
+                    temp += 0.5*alpha*(self.etav[i*(N_y + 1), j*(N_x + 1) + k] - self.etav[(i - 1)*(N_y + 1) + N_y, j*(N_x + 1) + k])
+                    etav_flux_y_num[i*(N_y + 1), j*(N_x + 1) + k] = etav_flux_y_num[(i - 1)*(N_y + 1) + N_y, j*(N_x + 1) + k] = temp
         #print('First y flux')
         #print(eta_flux_y_num)
         #print(etau_flux_y_num)
         #print(etav_flux_y_num, '\n\n\n\n')
 
         # Applying boundary conditions - Bath-tub model
-        for i in range(self.Ney):
-            for k in range(self.N_y + 1):
-                eta_flux_x_num[i*(self.N_y + 1) + k, 0] = 0 
-                eta_flux_x_num[i*(self.N_y + 1) + k, self.Nex*(self.N_x + 1) - 1] = 0
+        for i in range(Ney):
+            for k in range(N_y + 1):
+                eta_flux_x_num[i*(N_y + 1) + k, 0] = 0 
+                eta_flux_x_num[i*(N_y + 1) + k, Nex*(N_x + 1) - 1] = 0
 
-                alpha1 = abs(self.u[i*(self.N_y + 1) + k, 0]) + np.sqrt(g*self.eta[i*(self.N_y + 1) + k, 0])
-                alpha2 = abs(self.u[i*(self.N_y + 1) + k, self.Nex*(self.N_x + 1) - 1]) + np.sqrt(g*self.eta[i*(self.N_y + 1) + k, self.Nex*(self.N_x + 1) - 1])
-                etau_flux_x_num[i*(self.N_y + 1) + k, 0] = etau_flux_x[i*(self.N_y + 1) + k, 0] - alpha1*(self.etau[i*(self.N_y + 1) + k, 0])
-                etau_flux_x_num[i*(self.N_y + 1) + k, self.Nex*(self.N_x + 1) - 1] = etau_flux_x[i*(self.N_y + 1) + k, self.Nex*(self.N_x + 1) - 1] + alpha2*(self.u[i*(self.N_y + 1) + k, self.Nex*(self.N_x + 1) - 1])
+                alpha1 = abs(self.u[i*(N_y + 1) + k, 0]) + np.sqrt(g*self.eta[i*(N_y + 1) + k, 0])
+                alpha2 = abs(self.u[i*(N_y + 1) + k, Nex*(N_x + 1) - 1]) + np.sqrt(g*self.eta[i*(N_y + 1) + k, Nex*(N_x + 1) - 1])
+                etau_flux_x_num[i*(N_y + 1) + k, 0] = etau_flux_x[i*(N_y + 1) + k, 0] - alpha1*(self.etau[i*(N_y + 1) + k, 0])
+                etau_flux_x_num[i*(N_y + 1) + k, Nex*(N_x + 1) - 1] = etau_flux_x[i*(N_y + 1) + k, Nex*(N_x + 1) - 1] + alpha2*(self.u[i*(N_y + 1) + k, Nex*(N_x + 1) - 1])
 
-                etav_flux_x_num[i*(self.N_y + 1) + k, 0] = 0
-                etav_flux_x_num[i*(self.N_y + 1) + k, self.Nex*(self.N_x + 1) - 1] = 0
+                etav_flux_x_num[i*(N_y + 1) + k, 0] = 0
+                etav_flux_x_num[i*(N_y + 1) + k, Nex*(N_x + 1) - 1] = 0
         #print('boundary x flux')
         #print(eta_flux_x_num)
         #print(etau_flux_x_num)
         #print(etav_flux_x_num, '\n\n\n\n')
          
-        for j in range(self.Nex):
-            for k in range(self.N_x + 1):
-                eta_flux_y_num[0, j*(self.N_x + 1) + k] = 0
-                eta_flux_y_num[self.Ney*(self.N_y + 1) - 1, j*(self.N_x + 1) + k] = 0
+        for j in range(Nex):
+            for k in range(N_x + 1):
+                eta_flux_y_num[0, j*(N_x + 1) + k] = 0
+                eta_flux_y_num[Ney*(N_y + 1) - 1, j*(N_x + 1) + k] = 0
 
-                etau_flux_y_num[0, j*(self.N_x + 1) + k] = 0
-                etau_flux_y_num[self.Ney*(self.N_y + 1) - 1, j*(self.N_x + 1) + k] = 0
+                etau_flux_y_num[0, j*(N_x + 1) + k] = 0
+                etau_flux_y_num[Ney*(N_y + 1) - 1, j*(N_x + 1) + k] = 0
 
-                alpha1 = abs(self.v[0, j*(self.N_x + 1) + k]) + np.sqrt(g*self.eta[0, j*(self.N_x + 1) + k])
-                alpha2 = abs(self.v[self.Ney*(self.N_y + 1) - 1, j*(self.N_x + 1) + k]) + np.sqrt(g*self.eta[self.Ney*(self.N_y + 1) - 1, j*(self.N_x + 1) + k])
-                etav_flux_y_num[0, j*(self.N_x + 1) + k] = etav_flux_y[0, j*(self.N_x + 1) + k] - alpha1*(self.etav[0, j*(self.N_x + 1) + k])
-                etav_flux_y_num[self.Ney*(self.N_y + 1) - 1, j*(self.N_x + 1) + k] = etav_flux_y[self.Ney*(self.N_y + 1) - 1, j*(self.N_x + 1) + k] + alpha2*(self.v[self.Ney*(self.N_y + 1) - 1, j*(self.N_x + 1) + k])
+                alpha1 = abs(self.v[0, j*(N_x + 1) + k]) + np.sqrt(g*self.eta[0, j*(N_x + 1) + k])
+                alpha2 = abs(self.v[Ney*(N_y + 1) - 1, j*(N_x + 1) + k]) + np.sqrt(g*self.eta[Ney*(N_y + 1) - 1, j*(N_x + 1) + k])
+                etav_flux_y_num[0, j*(N_x + 1) + k] = etav_flux_y[0, j*(N_x + 1) + k] - alpha1*(self.etav[0, j*(N_x + 1) + k])
+                etav_flux_y_num[Ney*(N_y + 1) - 1, j*(N_x + 1) + k] = etav_flux_y[Ney*(N_y + 1) - 1, j*(N_x + 1) + k] + alpha2*(self.v[Ney*(N_y + 1) - 1, j*(N_x + 1) + k])
         #print('boundary y flux')
         #print(eta_flux_y_num)
         #print(etau_flux_y_num)
         #print(etav_flux_y_num, '\n\n\n\n')
+
+        eta_dot = np.zeros(self.mat_shape)
+        etau_dot = np.zeros(self.mat_shape)
+        etav_dot = np.zeros(self.mat_shape)
+
+        derivative_x = 0.5*self.delta_y*self.derivative_x
+        derivative_y = 0.5*self.delta_x*self.derivative_y
         
-        etaRHS  = etaRHS.reshape(self.Ney, self.Nex, (self.N_x + 1)*(self.N_y + 1))
-        etauRHS = etauRHS.reshape(self.Ney, self.Nex, (self.N_x + 1)*(self.N_y + 1))
-        etavRHS = etavRHS.reshape(self.Ney, self.Nex, (self.N_x + 1)*(self.N_y + 1))
+        flux_down  =  0.5*self.delta_x*self.flux_down
+        flux_right = -0.5*self.delta_y*self.flux_right
+        flux_up    = -0.5*self.delta_x*self.flux_up
+        flux_left  =  0.5*self.delta_y*self.flux_left
 
-        eta_flux_x  = eta_flux_x.reshape(self.Ney, self.Nex, (self.N_x + 1)*(self.N_y + 1))
-        eta_flux_y  = eta_flux_y.reshape(self.Ney, self.Nex, (self.N_x + 1)*(self.N_y + 1))
-        etau_flux_x = etau_flux_x.reshape(self.Ney, self.Nex, (self.N_x + 1)*(self.N_y + 1))
-        etau_flux_y = etau_flux_y.reshape(self.Ney, self.Nex, (self.N_x + 1)*(self.N_y + 1))
-        etav_flux_x = etav_flux_x.reshape(self.Ney, self.Nex, (self.N_x + 1)*(self.N_y + 1))
-        etav_flux_y = etav_flux_y.reshape(self.Ney, self.Nex, (self.N_x + 1)*(self.N_y + 1))
 
-        eta_flux_x_num  = eta_flux_x_num.reshape(self.Ney, self.Nex, (self.N_x + 1)*(self.N_y + 1))
-        eta_flux_y_num  = eta_flux_y_num.reshape(self.Ney, self.Nex, (self.N_x + 1)*(self.N_y + 1))
-        etau_flux_x_num = etau_flux_x_num.reshape(self.Ney, self.Nex, (self.N_x + 1)*(self.N_y + 1))
-        etau_flux_y_num = etau_flux_y_num.reshape(self.Ney, self.Nex, (self.N_x + 1)*(self.N_y + 1))
-        etav_flux_x_num = etav_flux_x_num.reshape(self.Ney, self.Nex, (self.N_x + 1)*(self.N_y + 1))
-        etav_flux_y_num = etav_flux_y_num.reshape(self.Ney, self.Nex, (self.N_x + 1)*(self.N_y + 1))
+        for i in range(Ney):
+            for j in range(Nex):
+                i_start = i*(N_y + 1)
+                i_end   = N_y + 1 + i*(N_y + 1)  
+                j_start = j*(N_x + 1)
+                j_end   = N_x + 1 + j*(N_x + 1)
+                etaRHS[i_start:i_end, j_start:j_end]  += np.dot(derivative_x, eta_flux_x[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
+                etaRHS[i_start:i_end, j_start:j_end]  += np.dot(derivative_y, eta_flux_y[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
+                etaRHS[i_start:i_end, j_start:j_end]  += np.dot(flux_down,    eta_flux_x_num[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
+                etaRHS[i_start:i_end, j_start:j_end]  += np.dot(flux_right,   eta_flux_x_num[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
+                etaRHS[i_start:i_end, j_start:j_end]  += np.dot(flux_up,      eta_flux_x_num[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
+                etaRHS[i_start:i_end, j_start:j_end]  += np.dot(flux_left,    eta_flux_x_num[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
+                
+                etauRHS[i_start:i_end, j_start:j_end] += np.dot(derivative_x, etau_flux_x[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
+                etauRHS[i_start:i_end, j_start:j_end] += np.dot(derivative_y, etau_flux_y[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
+                etauRHS[i_start:i_end, j_start:j_end] += np.dot(flux_down,    etau_flux_y_num[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
+                etauRHS[i_start:i_end, j_start:j_end] += np.dot(flux_right,   etau_flux_x_num[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
+                etauRHS[i_start:i_end, j_start:j_end] += np.dot(flux_up,      etau_flux_y_num[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
+                etauRHS[i_start:i_end, j_start:j_end] += np.dot(flux_left,    etau_flux_x_num[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
 
-        etaRHS += matrix_vec_product_DSS(0.5*self.delta_y*self.derivative_x, eta_flux_x) 
-        etaRHS += matrix_vec_product_DSS(0.5*self.delta_x*self.derivative_y, eta_flux_y)
+                etavRHS[i_start:i_end, j_start:j_end] += np.dot(derivative_x, etav_flux_x[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
+                etavRHS[i_start:i_end, j_start:j_end] += np.dot(derivative_y, etav_flux_y[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
+                etavRHS[i_start:i_end, j_start:j_end] += np.dot(flux_down,    etav_flux_y_num[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
+                etavRHS[i_start:i_end, j_start:j_end] += np.dot(flux_right,   etav_flux_x_num[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
+                etavRHS[i_start:i_end, j_start:j_end] += np.dot(flux_up,      etav_flux_y_num[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
+                etavRHS[i_start:i_end, j_start:j_end] += np.dot(flux_left,    etav_flux_x_num[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
 
-        etauRHS += matrix_vec_product_DSS(0.5*self.delta_y*self.derivative_x, etau_flux_x)
-        #print(etauRHS, '\n\n\n')  
-        etauRHS += matrix_vec_product_DSS(0.5*self.delta_x*self.derivative_y, etau_flux_y)
-        #print(etauRHS, '\n\n\n')
-        
-        etavRHS += matrix_vec_product_DSS(0.5*self.delta_y*self.derivative_x, etav_flux_x) 
-        etavRHS +=  matrix_vec_product_DSS(0.5*self.delta_x*self.derivative_y, etav_flux_y) 
-
-        etaRHS += matrix_vec_product_DSS(0.5*self.delta_x*self.flux_down, eta_flux_x_num)
-        etaRHS += matrix_vec_product_DSS(-0.5*self.delta_y*self.flux_right, eta_flux_x_num)
-        etaRHS += matrix_vec_product_DSS(-0.5*self.delta_x*self.flux_up, eta_flux_x_num)
-        etaRHS += matrix_vec_product_DSS(0.5*self.delta_y*self.flux_left, eta_flux_x_num)
-
-        etauRHS += matrix_vec_product_DSS(0.5*self.delta_x*self.flux_down, etau_flux_x_num)
-        #print(etauRHS, '\n\n\n')
-        etauRHS += matrix_vec_product_DSS(-0.5*self.delta_y*self.flux_right, etau_flux_x_num)
-        #print(etauRHS, '\n\n\n')
-        etauRHS += matrix_vec_product_DSS(-0.5*self.delta_x*self.flux_up, etau_flux_x_num)
-        #print(etauRHS, '\n\n\n')
-        etauRHS += matrix_vec_product_DSS(0.5*self.delta_y*self.flux_left, etau_flux_x_num)
-        #print(etauRHS, '\n\n\n')
-
-        etavRHS += matrix_vec_product_DSS(0.5*self.delta_x*self.flux_down, etav_flux_x_num)
-        etavRHS += matrix_vec_product_DSS(-0.5*self.delta_y*self.flux_right, etav_flux_x_num)
-        etavRHS += matrix_vec_product_DSS(-0.5*self.delta_x*self.flux_up, etav_flux_x_num)
-        etavRHS += matrix_vec_product_DSS(0.5*self.delta_y*self.flux_left, eta_flux_x_num)
-
-        eta_dot = (4)/(self.delta_x*self.delta_y)*matrix_vec_product_DSS(self.mass_inverse, etaRHS).reshape(self.mat_shape)
-        etau_dot = (4)/(self.delta_x*self.delta_y)*matrix_vec_product_DSS(self.mass_inverse, etauRHS).reshape(self.mat_shape)
-        etav_dot = (4)/(self.delta_x*self.delta_y)*matrix_vec_product_DSS(self.mass_inverse, etavRHS).reshape(self.mat_shape)
+                eta_dot[i_start:i_end, j_start:j_end]  = (4)/(self.delta_x*self.delta_y)*np.dot(self.mass_inverse, etaRHS[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
+                etau_dot[i_start:i_end, j_start:j_end] = (4)/(self.delta_x*self.delta_y)*np.dot(self.mass_inverse, etauRHS[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
+                etav_dot[i_start:i_end, j_start:j_end] = (4)/(self.delta_x*self.delta_y)*np.dot(self.mass_inverse, etavRHS[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
 
         return eta_dot, etau_dot, etav_dot
 
-    def RK4(self):
-        eta_prev = self.eta
-        etau_prev = self.etau
-        etav_prev = self.etav
-
-        k1_eta, k1_etau, k1_etav = self.find_rates()
-        self.eta = eta_prev + 0.5*self.dt*k1_eta
-        self.etau = etau_prev + 0.5*self.dt*k1_etau
-        self.etav = etav_prev + 0.5*self.dt*k1_etav
+    def compute_velocities(self):
         self.u = self.etau/self.eta
         self.v = self.etav/self.eta
 
-        k2_eta, k2_etau, k2_etav = self.find_rates()
-        self.eta = eta_prev + 0.5*self.dt*k2_eta
-        self.etau = etau_prev + 0.5*self.dt*k2_etau
-        self.etav = etav_prev + 0.5*self.dt*k2_etav
-        self.u = self.etau/self.eta
-        self.v = self.etav/self.eta
-
-        k3_eta, k3_etau, k3_etav = self.find_rates()
-        self.eta = eta_prev + self.dt*k3_eta
-        self.etau = etau_prev + self.dt*k3_etau
-        self.etav = etav_prev + self.dt*k3_etav
-        self.u = self.etau/self.eta
-        self.v = self.etav/self.eta
-
-        k4_eta, k4_etau, k4_etav = self.find_rates()
-
-        print((1/6.0)*self.dt*(k1_eta + 2*k2_eta + 2*k3_eta + k4_eta))
-        print((1/6.0)*self.dt*(k1_etau + 2*k2_etau + 2*k3_etau + k4_etau))
-        print((1/6.0)*self.dt*(k1_etav + 2*k2_etav + 2*k3_eta + k4_eta))
-        self.eta = eta_prev + (1/6.0)*self.dt*(k1_eta + 2*k2_eta + 2*k3_eta + k4_eta)
-        self.etau = etau_prev + (1/6.0)*self.dt*(k1_etau + 2*k2_etau + 2*k3_etau + k4_etau)
-        self.etav = etav_prev + (1/6.0)*self.dt*(k1_etav + 2*k2_etav + 2*k3_etav + k4_etav)
-
-        self.u = self.etau/self.eta
-        self.v = self.etav/self.eta
+    def change_variables(self):
+        def change_eta(eta):
+            self.eta = eta
+        def change_etau(etau):
+            self.etau = etau
+        def change_etav(etav):
+            self.etav = etav
+        return [change_eta, change_etau, change_etav]
 
     def make_etau_and_etav(self):
         self.etau = self.eta*self.u
         self.etav = self.eta*self.v
 
+    '''
+    def create_fig(self):
+        self.fig = plt.figure()
+        self.ax = self.fig.gca(projection='3d')
+        self.surf = self.ax.plot_surface(model.X, model.Y, model.eta - model.H, cmap=cm.coolwarm)
+
+    def animate(self, i):
+    '''
 
     def solve(self):
         time = [0]
         for i in range(int(self.time_steps) + 1):
             print('Time t = %2.4f, Courant number = %2.4f' %(time[-1], max(abs(self.u).max(), abs(self.v).max())*self.dt*(1/self.delta_x + 1/self.delta_y)))
-            self.RK4()
+            RK4([self.eta, self.etau, self.etav], self.find_rates,self. dt, self.compute_velocities, self.change_variables())
             time.append(time[-1] + self.dt)
+            if i%20 == 0:
+                fig = plt.figure()
+                ax = fig.gca(projection='3d')
+                surf = ax.plot_surface(self.X, self.Y, self.eta - self.H, cmap=cm.coolwarm)
+                plt.show()
 
 if __name__ == '__main__':
     print('Running main!!!')
@@ -384,11 +395,24 @@ if __name__ == '__main__':
         return 0.1*np.exp(-(x**2 + y**2)/10)
 
     model = shallow_water(10, 10, N=2)
-    model = shallow_water.shallow_water(2, 2, N=1)
     model.setH(funcH)
     model.setEta_initial(funcEta)
     model.setVelocity_initial(func_u, func_v)
-    model.setSimulationSpecs(0.000001, 0.5)
+    model.setSimulationSpecs(1e-4, 0.025)
     model.make_etau_and_etav()
-
+    
     model.solve()
+
+'''
+model = shallow_water.shallow_water(30, 30, N=1)
+model.setH(funcH)
+model.setEta_initial(funcEta)
+model.setVelocity_initial(func_u, func_v)
+model.setSimulationSpecs(1e-4, 0.5)
+model.make_etau_and_etav()
+
+fig = plt.figure()
+ax = fig.gca(projection='3d')
+surf = ax.plot_surface(model.X, model.Y, model.eta - model.H, cmap=cm.coolwarm)
+plt.show()
+'''
