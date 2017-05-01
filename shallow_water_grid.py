@@ -229,20 +229,23 @@ class shallow_water(object):
         for i in range(Ney):
             for j in range(1, Nex):
                 for k in range(N_y + 1):
-                    alpha = max(abs(self.u[i, j  , k, 0])   + np.sqrt(g*self.eta[i, j  , k, 0]), 
+                    alpha = max(abs(self.u[i, j, k, 0])   + np.sqrt(g*self.eta[i, j, k, 0]), 
                                 abs(self.u[i, j-1, k, N_x]) + np.sqrt(g*self.eta[i, j-1, k, N_x]))
 
-                    temp =  0.5*(eta_flux_x[i, j  , k, 0] + eta_flux_x[i, j-1, k, N_x])
-                    temp += 0.5*alpha*(self.eta[i, j  , k, 0] - self.eta[i, j-1, k, N_x]) 
-                    eta_flux_x_num[i, j, k, 0] = eta_flux_x_num[i, j-1, k, N_x] = temp
+                    temp =  0.5*(eta_flux_x[i, j, k, 0] + eta_flux_x[i, j-1, k, N_x])
+                    temp += 0.5*alpha*(self.eta[i, j, k, 0] - self.eta[i, j-1, k, N_x]) 
+                    eta_flux_x_num[i, j, k, 0] = temp
+                    eta_flux_x_num[i, j-1, k, N_x] = temp
 
                     temp =  0.5*(etau_flux_x[i, j, k, 0] + etau_flux_x[i, j-1, k, N_x])
-                    temp += 0.5*alpha*(self.etau[i, j, k, 0] - self.etau[i, j-1, k, N_x]) 
-                    etau_flux_x_num[i, j, k, 0] = etau_flux_x_num[i, j-1, k, N_x] = temp
+                    temp += 0.5*alpha*(self.etau[i, j, k, 0] - self.etau[i, j-1, k, N_x])
+                    etau_flux_x_num[i, j, k, 0] = temp
+                    etau_flux_x_num[i, j-1, k, N_x] = temp
 
                     temp =  0.5*(etav_flux_x[i, j, k, 0] + etav_flux_x[i, j-1, k, N_x])
                     temp += 0.5*alpha*(self.etav[i, j, k, 0] - self.etav[i, j-1, k, N_x]) 
-                    etav_flux_x_num[i, j, k, 0] = etav_flux_x_num[i, j-1, k, N_x] = temp
+                    etav_flux_x_num[i, j, k, 0] = temp
+                    etav_flux_x_num[i, j-1, k, N_x] = temp
     
         for i in range(1, Ney):
             for j in range(Nex):
@@ -252,15 +255,18 @@ class shallow_water(object):
 
                     temp =  0.5*(eta_flux_y[i, j, 0, k] + eta_flux_y[i-1, j, N_y, k])
                     temp += 0.5*alpha*(self.eta[i, j, 0, k] - self.eta[i-1, j, N_y, k])
-                    eta_flux_y_num[i, j, 0, k] = eta_flux_y_num[i-1, j, N_y, k] = temp
+                    eta_flux_y_num[i, j, 0, k] = temp
+                    eta_flux_y_num[i-1, j, N_y, k] = temp
 
                     temp =  0.5*(etau_flux_y[i, j, 0, k] + etau_flux_y[i-1, j, N_y, k])
                     temp += 0.5*alpha*(self.etau[i, j, 0, k] - self.etau[i-1, j, N_y, k])
-                    etau_flux_y_num[i, j, 0, k] = etau_flux_y_num[i-1, j, N_y, k] = temp
+                    etau_flux_y_num[i, j, 0, k] = temp
+                    etau_flux_y_num[i-1, j, N_y, k] = temp
 
                     temp =  0.5*(etav_flux_y[i, j, 0, k] + etav_flux_y[i-1, j, N_y, k])
                     temp += 0.5*alpha*(self.etav[i, j, 0, k] - self.etav[i-1, j, N_y, k])
-                    etav_flux_y_num[i, j, 0, k] = etav_flux_y_num[i-1, j, N_y, k] = temp
+                    etav_flux_y_num[i, j, 0, k] = temp
+                    etav_flux_y_num[i-1, j, N_y, k] = temp
         
         # Applying boundary conditions - Bath-tub model
         for i in range(Ney):
@@ -272,7 +278,7 @@ class shallow_water(object):
                 alpha2 = abs(self.u[i, Nex-1, k, N_x]) + np.sqrt(g*self.eta[i, Nex-1, k, N_x])
                 etau_flux_x_num[i, 0, k, 0] = etau_flux_x[i, 0, k, 0] - alpha1*(self.etau[i, 0, k, 0])
                 etau_flux_x_num[i, Nex-1, k, N_x] = etau_flux_x[i, Nex-1, k, N_x] + alpha2*(self.u[i, Nex-1, k, N_x])
-
+                
                 etav_flux_x_num[i, 0, k, 0] = 0
                 etav_flux_x_num[i, Nex-1, k, N_x] = 0
           
@@ -288,7 +294,7 @@ class shallow_water(object):
                 alpha2 = abs(self.v[Ney-1, j, N_y, k]) + np.sqrt(g*self.eta[Ney-1, j, N_y, k])
                 etav_flux_y_num[0, j, 0, k] = etav_flux_y[0, j, 0, k] - alpha1*(self.etav[0, j, 0, k])
                 etav_flux_y_num[Ney-1, j, N_y, k] = etav_flux_y[Ney-1, j, N_y, k] + alpha2*(self.v[Ney-1, j, N_y, k])
-        
+                
         eta_dot = np.zeros((Ney, Nex, (N_y+1)*(N_x+1), 1))
         etau_dot = np.zeros((Ney, Nex, (N_y+1)*(N_x+1), 1))
         etav_dot = np.zeros((Ney, Nex, (N_y+1)*(N_x+1), 1))
@@ -344,7 +350,7 @@ class shallow_water(object):
         del derivative_x, derivative_y
         del flux_down, flux_right, flux_up, flux_left
         del mass_inverse
-        del i, j, k, temp, alpha, alpha1, alpha2
+        #del i, j, k, temp, alpha, alpha1, alpha2
 
         return eta_dot, etau_dot, etav_dot
 
