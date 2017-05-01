@@ -11,15 +11,6 @@ from matrices import *
 
 g = 9.81
 
-'''
-def matrix_vec_product_DSS(a, b):
-    res = np.zeros(b.shape)
-    for i in range(b.shape[0]):
-        for j in range(b.shape[1]):
-            res[i, j, :] = np.dot(a, b[i, j, :])
-    return res
-'''
-
 def RK4(x0, func_x_dot, h, func=None, change_variables=None):
     if func == None :
         def func():
@@ -197,8 +188,8 @@ class shallow_water(object):
         N_x = self.N_x
         N_y = self.N_y
         etaRHS  = np.zeros(self.mat_shape)
-        etauRHS = g*self.eta*self.H_x
-        etavRHS = g*self.eta*self.H_y
+        etauRHS = 0
+        etavRHS = 0
 
         # Flux terms
         eta_flux_x  = self.eta*self.u
@@ -234,11 +225,7 @@ class shallow_water(object):
                     temp =  0.5*(etav_flux_x[i*(N_y + 1) + k, j*(N_x + 1)] + etav_flux_x[i*(N_y + 1) + k, (j - 1)*(N_x + 1) + N_x])
                     temp += 0.5*alpha*(self.etav[i*(N_y + 1) + k, j*(N_x + 1)] - self.etav[i*(N_y + 1) + k, (j - 1)*(N_x + 1) + N_x]) 
                     etav_flux_x_num[i*(N_y + 1) + k, j*(N_x + 1)] = etav_flux_x_num[i*(N_y + 1) + k, (j - 1)*(N_x + 1) + N_x] = temp
-        #print('First x flux')
-        #print(eta_flux_x_num)
-        #print(etau_flux_x_num)
-        #print(etav_flux_x_num, '\n\n\n\n')
-
+    
         for i in range(1, Ney):
             for j in range(Nex):
                 for k in range(N_x + 1):
@@ -256,11 +243,7 @@ class shallow_water(object):
                     temp =  0.5*(etav_flux_y[i*(N_y + 1), j*(N_x + 1) + k] + etav_flux_y[(i - 1)*(N_y + 1) + N_y, j*(N_x + 1) + k])
                     temp += 0.5*alpha*(self.etav[i*(N_y + 1), j*(N_x + 1) + k] - self.etav[(i - 1)*(N_y + 1) + N_y, j*(N_x + 1) + k])
                     etav_flux_y_num[i*(N_y + 1), j*(N_x + 1) + k] = etav_flux_y_num[(i - 1)*(N_y + 1) + N_y, j*(N_x + 1) + k] = temp
-        #print('First y flux')
-        #print(eta_flux_y_num)
-        #print(etau_flux_y_num)
-        #print(etav_flux_y_num, '\n\n\n\n')
-
+        
         # Applying boundary conditions - Bath-tub model
         for i in range(Ney):
             for k in range(N_y + 1):
@@ -274,11 +257,7 @@ class shallow_water(object):
 
                 etav_flux_x_num[i*(N_y + 1) + k, 0] = 0
                 etav_flux_x_num[i*(N_y + 1) + k, Nex*(N_x + 1) - 1] = 0
-        #print('boundary x flux')
-        #print(eta_flux_x_num)
-        #print(etau_flux_x_num)
-        #print(etav_flux_x_num, '\n\n\n\n')
-         
+          
         for j in range(Nex):
             for k in range(N_x + 1):
                 eta_flux_y_num[0, j*(N_x + 1) + k] = 0
@@ -291,11 +270,7 @@ class shallow_water(object):
                 alpha2 = abs(self.v[Ney*(N_y + 1) - 1, j*(N_x + 1) + k]) + np.sqrt(g*self.eta[Ney*(N_y + 1) - 1, j*(N_x + 1) + k])
                 etav_flux_y_num[0, j*(N_x + 1) + k] = etav_flux_y[0, j*(N_x + 1) + k] - alpha1*(self.etav[0, j*(N_x + 1) + k])
                 etav_flux_y_num[Ney*(N_y + 1) - 1, j*(N_x + 1) + k] = etav_flux_y[Ney*(N_y + 1) - 1, j*(N_x + 1) + k] + alpha2*(self.v[Ney*(N_y + 1) - 1, j*(N_x + 1) + k])
-        #print('boundary y flux')
-        #print(eta_flux_y_num)
-        #print(etau_flux_y_num)
-        #print(etav_flux_y_num, '\n\n\n\n')
-
+        
         eta_dot = np.zeros(self.mat_shape)
         etau_dot = np.zeros(self.mat_shape)
         etav_dot = np.zeros(self.mat_shape)
@@ -308,6 +283,8 @@ class shallow_water(object):
         flux_up    = -0.5*self.delta_x*self.flux_up
         flux_left  =  0.5*self.delta_y*self.flux_left
 
+        mass_inverse = (4)/(self.delta_x*self.delta_y)*self.mass_inverse
+
 
         for i in range(Ney):
             for j in range(Nex):
@@ -315,30 +292,40 @@ class shallow_water(object):
                 i_end   = N_y + 1 + i*(N_y + 1)  
                 j_start = j*(N_x + 1)
                 j_end   = N_x + 1 + j*(N_x + 1)
-                etaRHS[i_start:i_end, j_start:j_end]  += np.dot(derivative_x, eta_flux_x[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
-                etaRHS[i_start:i_end, j_start:j_end]  += np.dot(derivative_y, eta_flux_y[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
+                etaRHS[i_start:i_end, j_start:j_end]  += np.dot(derivative_x, eta_flux_x[i_start:i_end, j_start:j_end]    .reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
+                etaRHS[i_start:i_end, j_start:j_end]  += np.dot(derivative_y, eta_flux_y[i_start:i_end, j_start:j_end]    .reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
                 etaRHS[i_start:i_end, j_start:j_end]  += np.dot(flux_down,    eta_flux_x_num[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
                 etaRHS[i_start:i_end, j_start:j_end]  += np.dot(flux_right,   eta_flux_x_num[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
                 etaRHS[i_start:i_end, j_start:j_end]  += np.dot(flux_up,      eta_flux_x_num[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
                 etaRHS[i_start:i_end, j_start:j_end]  += np.dot(flux_left,    eta_flux_x_num[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
                 
-                etauRHS[i_start:i_end, j_start:j_end] += np.dot(derivative_x, etau_flux_x[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
-                etauRHS[i_start:i_end, j_start:j_end] += np.dot(derivative_y, etau_flux_y[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
+                etauRHS[i_start:i_end, j_start:j_end] += np.dot(derivative_x, etau_flux_x[i_start:i_end, j_start:j_end]    .reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
+                etauRHS[i_start:i_end, j_start:j_end] += np.dot(derivative_y, etau_flux_y[i_start:i_end, j_start:j_end]    .reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
                 etauRHS[i_start:i_end, j_start:j_end] += np.dot(flux_down,    etau_flux_y_num[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
                 etauRHS[i_start:i_end, j_start:j_end] += np.dot(flux_right,   etau_flux_x_num[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
                 etauRHS[i_start:i_end, j_start:j_end] += np.dot(flux_up,      etau_flux_y_num[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
                 etauRHS[i_start:i_end, j_start:j_end] += np.dot(flux_left,    etau_flux_x_num[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
 
-                etavRHS[i_start:i_end, j_start:j_end] += np.dot(derivative_x, etav_flux_x[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
-                etavRHS[i_start:i_end, j_start:j_end] += np.dot(derivative_y, etav_flux_y[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
+                etavRHS[i_start:i_end, j_start:j_end] += np.dot(derivative_x, etav_flux_x[i_start:i_end, j_start:j_end]    .reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
+                etavRHS[i_start:i_end, j_start:j_end] += np.dot(derivative_y, etav_flux_y[i_start:i_end, j_start:j_end]    .reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
                 etavRHS[i_start:i_end, j_start:j_end] += np.dot(flux_down,    etav_flux_y_num[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
                 etavRHS[i_start:i_end, j_start:j_end] += np.dot(flux_right,   etav_flux_x_num[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
                 etavRHS[i_start:i_end, j_start:j_end] += np.dot(flux_up,      etav_flux_y_num[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
                 etavRHS[i_start:i_end, j_start:j_end] += np.dot(flux_left,    etav_flux_x_num[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
 
-                eta_dot[i_start:i_end, j_start:j_end]  = (4)/(self.delta_x*self.delta_y)*np.dot(self.mass_inverse, etaRHS[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
-                etau_dot[i_start:i_end, j_start:j_end] = (4)/(self.delta_x*self.delta_y)*np.dot(self.mass_inverse, etauRHS[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
-                etav_dot[i_start:i_end, j_start:j_end] = (4)/(self.delta_x*self.delta_y)*np.dot(self.mass_inverse, etavRHS[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
+                eta_dot[i_start:i_end, j_start:j_end]  = np.dot(mass_inverse, etaRHS[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
+                etau_dot[i_start:i_end, j_start:j_end] = np.dot(mass_inverse, etauRHS[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
+                etav_dot[i_start:i_end, j_start:j_end] = np.dot(mass_inverse, etavRHS[i_start:i_end, j_start:j_end].reshape((N_x+1)*(N_y+1))).reshape((N_y+1), (N_x+1))
+
+        # Cleaning workspace
+        del etaRHS, etauRHS, etavRHS 
+        del eta_flux_x_num, eta_flux_y_num, etau_flux_x_num, etau_flux_y_num, etav_flux_x_num, etav_flux_y_num
+        del eta_flux_x, eta_flux_y, etau_flux_x, etau_flux_y, etav_flux_x, etav_flux_y
+        del Nex, Ney, N_y, N_x
+        del derivative_x, derivative_y
+        del flux_down, flux_right, flux_up, flux_left
+        del mass_inverse
+        del i, j, k, i_start, i_end, j_start, j_end, temp, alpha, alpha1, alpha2
 
         return eta_dot, etau_dot, etav_dot
 
@@ -358,15 +345,6 @@ class shallow_water(object):
     def make_etau_and_etav(self):
         self.etau = self.eta*self.u
         self.etav = self.eta*self.v
-
-    '''
-    def create_fig(self):
-        self.fig = plt.figure()
-        self.ax = self.fig.gca(projection='3d')
-        self.surf = self.ax.plot_surface(model.X, model.Y, model.eta - model.H, cmap=cm.coolwarm)
-
-    def animate(self, i):
-    '''
 
     def solve(self):
         time = [0]
@@ -394,7 +372,7 @@ if __name__ == '__main__':
     def funcEta(x, y):
         return 0.1*np.exp(-(x**2 + y**2)/10)
 
-    model = shallow_water(10, 10, N=2)
+    model = shallow_water(10, 10, N=4)
     model.setH(funcH)
     model.setEta_initial(funcEta)
     model.setVelocity_initial(func_u, func_v)
@@ -402,17 +380,3 @@ if __name__ == '__main__':
     model.make_etau_and_etav()
     
     model.solve()
-
-'''
-model = shallow_water.shallow_water(30, 30, N=1)
-model.setH(funcH)
-model.setEta_initial(funcEta)
-model.setVelocity_initial(func_u, func_v)
-model.setSimulationSpecs(1e-4, 0.5)
-model.make_etau_and_etav()
-
-fig = plt.figure()
-ax = fig.gca(projection='3d')
-surf = ax.plot_surface(model.X, model.Y, model.eta - model.H, cmap=cm.coolwarm)
-plt.show()
-'''

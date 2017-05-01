@@ -125,12 +125,12 @@ def flux_matrix_2d(N_x, N_y, *, quad_nodes_x='lobatto', quad_nodes_y='lobatto', 
     i1=j1=0
     for i2 in range(N_y + 1) :
         for j2 in range(N_y + 1) :
-            left[i2*N_x + i2 + i1, j2*N_x + j2 + j1] = mass_x[i2, j2]
+            left[i2*N_x + i2 + i1, j2*N_x + j2 + j1] = mass_y[i2, j2]
 
     i1=j1=N_x
     for i2 in range(N_y + 1) :
         for j2 in range(N_y + 1) :
-            right[i2*N_x + i2 + i1, j2*N_x + j2 + j1] = mass_x[i2, j2]
+            right[i2*N_x + i2 + i1, j2*N_x + j2 + j1] = mass_y[i2, j2]
     
     return down, right, up, left
 
